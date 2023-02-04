@@ -1,0 +1,61 @@
+
+
+// Vertex shader
+const vertexShaderSource = `
+attribute vec3 vertex;
+attribute vec3 normal;
+uniform mat4 ModelViewProjectionMatrix, NormalMatrix;
+
+varying vec3 vertPos;
+varying vec3 vertNV;
+varying vec3 vertCol;
+
+void main() {
+    vertCol = vec3(1.0);
+    vec3 modelNV  = mat3( ModelViewProjectionMatrix ) * normalize( normal );
+    vertNV        = mat3( NormalMatrix ) * modelNV;
+    vec4 modelPos = ModelViewProjectionMatrix * vec4( vertex, 1.0 );
+    vec4 viewPos  = ModelViewProjectionMatrix * modelPos;
+    vertPos       = viewPos.xyz / viewPos.w;
+    gl_Position = viewPos;
+}`;
+
+
+// Fragment shader
+const fragmentShaderSource = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+   precision highp float;
+#else
+   precision mediump float;
+#endif
+
+varying vec3 vertPos;
+varying vec3 vertNV;
+varying vec3 vertCol;
+
+uniform vec3  lightPath;
+vec3  ambient = vec3(0.2);
+vec3  diffuse = vec3(0.6);
+vec3  specular = vec3(0.8);
+float shininess = 80.0;
+
+vec3 Light( vec3 eyeV, vec3 N )
+{
+  vec3  lightCol  = ambient;
+  vec3  L         = normalize( -lightPath );
+  float NdotL     = max( 0.0, dot( N, L ) );
+  lightCol       += NdotL * diffuse;
+  vec3  H         = normalize( eyeV + L );
+  float NdotH     = max( 0.0, dot( N, H ) );
+  float kSpecular = ( shininess + 2.0 ) * pow( NdotH, shininess ) / ( 2.0 * 3.14159265 );
+  lightCol       += kSpecular * specular;
+  return lightCol; 
+}
+
+void main() {
+    vec3 eyeV    = normalize( -vertPos );
+    vec3 normalV = normalize( vertNV );
+    vec3 color   = vertCol * Light( eyeV, normalV );
+    gl_FragColor = vec4(color ,1.0 );
+    //gl_FragColor = vec4(1.0);
+}`;
